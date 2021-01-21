@@ -1,0 +1,57 @@
+#
+# Copyright (c) 2020 ARM Limited
+#
+# SPDX-License-Identifier: Apache-2.0
+
+#ubuntu: docker image to be used to create a rootfs
+#latest: Docker image version to build this dockerfile
+from docker.io/ubuntu:latest
+
+#environment variable declaration, etc
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+
+# This dockerfile needs to provide all the componets need to build a rootfs
+# Install any package need to create a rootfs (package manager, extra tools)
+
+# RUN commands
+RUN apt-get update && apt-get install -y \
+    autoconf \
+    automake \
+    binutils \
+    build-essential \
+    chrony \
+    cmake \
+    coreutils \
+    curl \
+    debianutils \
+    debootstrap \
+    g++ \
+    gcc \
+    git \
+    libc6-dev \
+    libstdc++-8-dev \
+    m4 \
+    make \
+    sed \
+    systemd \
+    tar \
+    vim
+# This will install the proper golang to build Kata components
+
+RUN cd /tmp ; curl -OL https://storage.googleapis.com/golang/go1.11.10.linux-arm64.tar.gz
+RUN tar -C /usr/ -xzf /tmp/go1.11.10.linux-arm64.tar.gz
+ENV GOROOT=/usr/go
+ENV PATH=$PATH:$GOROOT/bin:$GOPATH/bin
+
+
+RUN cd /tmp; 	curl -sLO https://musl.cc/aarch64-linux-musl-native.tgz; tar -zxf aarch64-linux-musl-native.tgz; 	 mkdir -p /usr/local/musl/; 	cp -r aarch64-linux-musl-native/* /usr/local/musl/
+ENV PATH=$PATH:/usr/local/musl/bin
+RUN ln -sf /usr/local/musl/bin/g++ /usr/bin/g++
+
+
+RUN curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSLf --output /tmp/rust-init;     chmod a+x /tmp/rust-init; 	export http_proxy=; 	export https_proxy=; 	/tmp/rust-init -y
+RUN . /root/.cargo/env;     export http_proxy=; 	export https_proxy=; 	cargo install cargo-when; 	rustup toolchain install 1.38.0; 	rustup default 1.38.0; 	rustup target install aarch64-unknown-linux-musl
+RUN ln -sf /usr/bin/g++ /bin/musl-g++
+
